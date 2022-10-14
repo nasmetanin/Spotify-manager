@@ -1,35 +1,34 @@
 import os
-import schedule
+from apscheduler.schedulers.blocking import BlockingScheduler
 import time
 
 run = """osascript -e 'tell application "Spotify"
-	play track "spotify:playlist:37i9dQZF1DWWY64wDtewQt?si=73c375e585d943bb"
+	play track "spotify:playlist:31BU4oBitkjrSzZd4IY67V?si=27f0f055d3834ba4"
 end tell'""", "Playing music"
 
 stop = """osascript -e 'tell application "Spotify"
 	pause
 end tell'""", "Stop music"
 
-weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday']
-weekends = ['saturday', 'sunday']
-
 
 def execute(action):
     print("Executing: " + action[1] + f" at {time.strftime('%H:%M:%S')}")
     os.system(action[0])
 
+
+intervals = [('mon-fri', (7, 00), (20, 55)), ('sat-sun', (9, 00), (18, 55))]
+
+# test section to check permissions from macOS
+execute(stop)
+execute(run)
+
 print("📅 Starting scheduler...")
-for day in weekdays:
-    schedule.every().day.at("06:45").do(execute, run)
-    schedule.every().day.at("20:55").do(execute, stop)
 
-print("📅 Starting scheduler for weekends too...")
-for day in weekends:
-    schedule.every().day.at("08:45").do(execute, run)
-    schedule.every().day.at("18:55").do(execute, stop)
+scheduler = BlockingScheduler()
+for interval in intervals:
+    scheduler.add_job(execute, 'cron', [run],
+                      day_of_week=interval[0], hour=interval[1][0], minute=interval[1][1])
+    scheduler.add_job(execute, 'cron', [stop],
+                      day_of_week=interval[0], hour=interval[2][0], minute=interval[2][1])
 
-print("💤 Scheduler started! Going to sleep...")
-
-while True:
-    schedule.run_pending()
-    time.sleep(1)
+scheduler.start()
